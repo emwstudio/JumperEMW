@@ -1,17 +1,20 @@
-<!-- tracks: README.md @ sha256:c0d797d5195f0e1f -->
+<!-- tracks: README.md @ sha256:03a81d6c79eb9819 -->
 
-![跳跳](docs/media/jumper-hero-zh.png)
-
-# 跳跳
+# JumperEMW
 
 [English](README.md) | **简体中文**
 
-为**跳跳**，一台 22 自由度螃蟹机器人，设计外观、训练动作、创造场景。[查看硬件 →](docs/HARDWARE.zh.md)
+<img src="docs/media/run-top-speed.gif" align="right" width="300" alt="跳跳在 2 m/s 指令下冲刺，顶部带实时速度表">
 
-在 AI 编程助手中打开这个仓库，用一句话描述你的想法，开始创作。
-文末列出了相关项目和指南，AI 可以按需读取并使用。
+基于 **Jumper**——一台 22 自由度、3D 打印的螃蟹机器人——的个人实验：
+在 MuJoCo 里做强化学习动作训练，每个实验都有记录、可复现、全开源。
 
-> 🦀 **免费获得跳跳！** [了解如何领取 →](https://beunlimited.me/zh/events/crab-robot-challenge-2026)
+这是[电磁波 studio](https://github.com/emwstudio) 的个人实验仓库，
+不是 KingKong Robotics 的官方发布。仓库建立在开源的
+[Jumper 训练仓库](https://github.com/KingKongRobotics/jumper)之上，
+上游的历史与归属完整保留在本仓库的 git 历史中。
+
+<br clear="right">
 
 ## 实验
 
@@ -44,57 +47,52 @@
   </tbody>
 </table>
 
-## 一句话，设计外观
+## 快速上手
 
-> 为跳跳设计一个暖沙色游侠外观，统一身体和四肢配色，并导出 `.skin`。
+需要 Python 3.10–3.13。NVIDIA 显卡机器安装 GPU 版 PyTorch；
+其他机器安装 CPU 版并选用 native 后端。
 
-| | | |
-|:-:|:-:|:-:|
-| ![暖沙色游侠外观](docs/media/design-warm-sand.png) | ![银色装甲外观](docs/media/design-silver-armor.png) | ![Raphael Turtle 外观](docs/media/design-raphael.png) |
-| [**暖沙色游侠**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/skins/warm-sand-ranger-integrated-v2.skin) | [**银色装甲**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/skins/mecha-tripo-v3.skin) | [**Raphael Turtle**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/skins/raphael-turtle-v1.skin) |
+```bash
+git clone https://github.com/emwstudio/JumperEMW.git
+cd JumperEMW
+python3 -m venv .venv && source .venv/bin/activate
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+pip install -e .
 
-[浏览全部外观](https://github.com/KingKongRobotics/jumper-design/tree/main/library/skins)
+python scripts/train.py --list
+python scripts/train.py --task jumper.run
+python scripts/play.py --task jumper.run --checkpoint <路径>/model_9999.pt
+```
 
-## 一句话，训练动作
+play 窗口是可以上手玩的：按 **W** 前进，**Backspace** 重置，
+顶部挂着同款实时速度表。从训练到打包的完整流程见
+[训练教程](docs/TUTORIAL.zh.md)；Linux、macOS、Windows 的安装细节见
+[项目指南](docs/PROJECT_GUIDE.zh.md)。
 
-> 为跳跳训练稳定的三足步态，回放并评估效果，然后打包生成 `.app` 动作包。
+## 仓库结构
 
-| | | |
-|:-:|:-:|:-:|
-| ![跳跳行走](docs/media/walk.gif) | ![跳跳改变姿态](docs/media/posture.gif) | ![跳跳挥手](docs/media/gesture.gif) |
-| **行走** | **姿态** | **手势** |
-| ![舞蹈仿真](docs/media/dance.gif)<br>![舞蹈官网展示](docs/media/official-dance.gif) | ![跳跃仿真](docs/media/jump.gif)<br>![跳跃官网展示](docs/media/official-jump.gif) | ![抓取仿真](docs/media/claw.gif)<br>![抓取官网展示](docs/media/official-grasp.gif) |
-| **舞蹈** | **跳跃** | **抓取** |
+```text
+tasks/jumper/run/      冲刺任务：环境配置、奖励项、操控
+tasks/jumper/          上游的步态、舞蹈、手势等任务
+rl/mjrl/               训练支撑代码与实时 play 窗口
+scripts/               训练、试玩、导出、部署
+deploy/                从 checkpoint 到真机：动作包、RKNN、各宿主端
+docs/                  手册与指南，中英双语
+tests/                 守护以上一切的测试套件
+```
 
-## 一句话，生成场景
+## 范围说明
 
-> 为跳跳生成一个有起伏地形、树木和长椅的公园泵道场景，并导出 `.map`。
+这些是仿真实验，不是真机安全认证。2.15 m/s 是平地上的仿真成绩，
+真机还没有跑过。真机跑出结果后，会在这里汇报。
 
-| | | |
-|:-:|:-:|:-:|
-| ![公园泵道场景](docs/media/design-park.png) | ![卧室场景](docs/media/design-bedroom.png) | ![足球场景](docs/media/design-soccer.png) |
-| [**公园泵道**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/maps/park-pump-track.map) | [**卧室**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/maps/bedroom.map) | [**足球**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/maps/soccer.map) |
+## 上游与许可
 
-[浏览全部场景](https://github.com/KingKongRobotics/jumper-design/tree/main/library/maps)
+Jumper 产品仓库在
+[KingKongRobotics/jumper](https://github.com/KingKongRobotics/jumper)；
+外观与场景创作使用独立的
+[jumper-design](https://github.com/KingKongRobotics/jumper-design) 仓库。
 
-## 相关项目与指南
-
-| 资源 | 用途 |
-|---|---|
-| [jumper-design](https://github.com/KingKongRobotics/jumper-design) | 外观与场景生成；AI 读取其[工作说明](https://github.com/KingKongRobotics/jumper-design/blob/main/AGENTS.md)，按需使用工具。 |
-| [训练教程](docs/TUTORIAL.zh.md) | 本仓库中的动作训练、回放与策略导出。 |
-| [动作包格式](deploy/BUNDLE.md) | 将训练好的动作及控制器打包为 `.app`；环境要求见[构建指南](deploy/README.md)。 |
-| [项目指南](docs/PROJECT_GUIDE.zh.md) | 环境安装、当前能力和更多文档。 |
-
-训练基于 [mjlab](https://github.com/mujocolab/mjlab)、
-[rsl_rl](https://github.com/leggedrobotics/rsl_rl)、[MuJoCo](https://github.com/google-deepmind/mujoco)
-和 [MuJoCo Warp](https://github.com/google-deepmind/mujoco_warp)。
-外观与场景示例图片来自 jumper-design，出处见[图片来源](docs/media/DESIGN_SOURCES.md)，
-第三方材料归属见 [NOTICE](NOTICE)。
-
-## 许可证
-
-Copyright 2026 KingKong Robotics.
-
-维护者拥有权利的项目内容采用 Apache-2.0。详见 [LICENSE](LICENSE)、[NOTICE](NOTICE)
-和[许可说明](docs/PROJECT_GUIDE.zh.md#许可证)。第三方内容保留其各自的许可条款；使用本工具生成的文件不会自动继承本仓库许可证。
+Copyright 2026 KingKong Robotics。维护者拥有权利的项目内容采用 Apache-2.0，
+详见 [LICENSE](LICENSE) 与 [NOTICE](NOTICE)。第三方内容保留其各自的许可条款。
+本仓库新增的实验与文档采用相同许可。

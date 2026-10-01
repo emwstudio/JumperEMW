@@ -1,15 +1,20 @@
-![Jumper](docs/media/jumper-hero-en.png)
-
-# Jumper
+# JumperEMW
 
 **English** | [简体中文](README.zh.md)
 
-Design appearances. Train motions. Create worlds for **Jumper**, a 22-DoF crab robot. [View hardware →](docs/HARDWARE.md)
+<img src="docs/media/run-top-speed.gif" align="right" width="300" alt="Jumper sprinting at 2 m/s with a live speed readout">
 
-Open this repository in an AI coding assistant and describe what you want in one sentence.
-The linked projects and guides below give your assistant the workflows to follow.
+Personal experiments on **Jumper**, a 22-DoF 3D-printed crab robot:
+reinforcement-learning motion training in MuJoCo, with each experiment
+documented, reproducible, and open.
 
-> 🦀 **Get a free Jumper!** [Find out how →](https://beunlimited.me/zh/events/crab-robot-challenge-2026)
+This is an independent playground by [EMW Studio](https://github.com/emwstudio),
+not an official KingKong Robotics release. It builds on the open-source
+[Jumper training repository](https://github.com/KingKongRobotics/jumper);
+upstream history and attribution are preserved in this repository's git
+history.
+
+<br clear="right">
 
 ## Experiments
 
@@ -44,59 +49,55 @@ video. Results are simulation rollouts; hardware validation is still ahead.
   </tbody>
 </table>
 
-## One sentence to design an appearance
+## Quick start
 
-> Design a warm sand ranger appearance for Jumper with coordinated body and limb colors, then export a `.skin`.
+Python 3.10–3.13. On an NVIDIA machine install the GPU build of PyTorch;
+anywhere else, install the CPU build and select the native backend.
 
-| | | |
-|:-:|:-:|:-:|
-| ![Warm sand ranger appearance](docs/media/design-warm-sand.png) | ![Silver armor appearance](docs/media/design-silver-armor.png) | ![Raphael Turtle appearance](docs/media/design-raphael.png) |
-| [**Warm sand ranger**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/skins/warm-sand-ranger-integrated-v2.skin) | [**Silver armor**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/skins/mecha-tripo-v3.skin) | [**Raphael Turtle**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/skins/raphael-turtle-v1.skin) |
+```bash
+git clone https://github.com/emwstudio/JumperEMW.git
+cd JumperEMW
+python3 -m venv .venv && source .venv/bin/activate
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+pip install -e .
 
-[Browse all skins](https://github.com/KingKongRobotics/jumper-design/tree/main/library/skins)
+python scripts/train.py --list
+python scripts/train.py --task jumper.run
+python scripts/play.py --task jumper.run --checkpoint <path>/model_9999.pt
+```
 
-## One sentence to train a motion
+The play window is drivable: **W** runs, **Backspace** resets the episode,
+and the live speed readout sits on top. See the
+[training tutorial](docs/TUTORIAL.md) for the full path from training to a
+deployable bundle, and [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md) for
+setup details on Linux, macOS and Windows.
 
-> Train a stable tripod gait for Jumper, replay and evaluate the result, then package it as an `.app`.
+## Repository layout
 
-| | | |
-|:-:|:-:|:-:|
-| ![Jumper walking](docs/media/walk.gif) | ![Jumper changing posture](docs/media/posture.gif) | ![Jumper waving](docs/media/gesture.gif) |
-| **Walk** | **Posture** | **Gesture** |
-| ![Dance simulation](docs/media/dance.gif)<br>![Dance website showcase](docs/media/official-dance.gif) | ![Jump simulation](docs/media/jump.gif)<br>![Jump website showcase](docs/media/official-jump.gif) | ![Grasp simulation](docs/media/claw.gif)<br>![Grasp website showcase](docs/media/official-grasp.gif) |
-| **Dance** | **Jump** | **Grasp** |
+```text
+tasks/jumper/run/      the sprint task: env config, rewards, controls
+tasks/jumper/          the upstream gaits, dances, gestures and more
+rl/mjrl/               training glue and the live play viewer
+scripts/               train, play, export, deploy
+deploy/                from a checkpoint to the robot: bundle, RKNN, hosts
+docs/                  manuals and guides, bilingual
+tests/                 the suite that guards all of the above
+```
 
-## One sentence to create a scene
+## Scope
 
-> Create a park pump-track scene for Jumper with rolling terrain, trees and benches, then export a `.map`.
+These are simulation experiments, not hardware certifications. The 2.15 m/s
+figure is a simulation result on flat ground; the real robot has not run it
+yet. Hardware results will be reported here when they exist.
 
-| | | |
-|:-:|:-:|:-:|
-| ![Park pump track scene](docs/media/design-park.png) | ![Bedroom scene](docs/media/design-bedroom.png) | ![Soccer scene](docs/media/design-soccer.png) |
-| [**Park pump track**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/maps/park-pump-track.map) | [**Bedroom**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/maps/bedroom.map) | [**Soccer**](https://github.com/KingKongRobotics/jumper-design/blob/be74e0f2e5e2433d24a3a7b1c1aa0dbeae480356/library/maps/soccer.map) |
+## Upstream and license
 
-[Browse all maps](https://github.com/KingKongRobotics/jumper-design/tree/main/library/maps)
+The Jumper product lives at
+[KingKongRobotics/jumper](https://github.com/KingKongRobotics/jumper);
+appearance and scene creation use the separate
+[jumper-design](https://github.com/KingKongRobotics/jumper-design) repository.
 
-## Where to find things
-
-| Resource | Purpose |
-|---|---|
-| [jumper-design](https://github.com/KingKongRobotics/jumper-design) | Appearance and scene creation; your assistant reads its [instructions](https://github.com/KingKongRobotics/jumper-design/blob/main/AGENTS.md) and uses its tools as needed. |
-| [Training tutorial](docs/TUTORIAL.md) | Motion training, replay and policy export in this repository. |
-| [Motion bundles](deploy/BUNDLE.md) | Package trained motions and their controller as an `.app`; see the [build guide](deploy/README.md) for prerequisites. |
-| [Project guide](docs/PROJECT_GUIDE.md) | Setup, current capabilities and further documentation. |
-
-Training builds on [mjlab](https://github.com/mujocolab/mjlab),
-[rsl_rl](https://github.com/leggedrobotics/rsl_rl), [MuJoCo](https://github.com/google-deepmind/mujoco)
-and [MuJoCo Warp](https://github.com/google-deepmind/mujoco_warp).
-Example appearance and scene images come from jumper-design; [image sources](docs/media/DESIGN_SOURCES.md)
-and [third-party notices](NOTICE) record attribution.
-
-## License
-
-Copyright 2026 KingKong Robotics.
-
-Maintainer-owned project materials are licensed under Apache-2.0. See [LICENSE](LICENSE),
-[NOTICE](NOTICE), and [licensing details](docs/PROJECT_GUIDE.md#license).
-Third-party materials remain under their respective terms, and generated outputs do not
-automatically inherit this repository's license.
+Copyright 2026 KingKong Robotics. Maintainer-owned project materials are
+licensed under Apache-2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+Third-party materials remain under their respective terms. Experiments and
+documentation added in this repository carry the same license.
