@@ -22,7 +22,8 @@ depicted robot, nor a hardware validation result. Original simulation GIFs remai
 pinned 2.0 m/s command, recorded 2026-10-01 with `eval/render_top_speed_video.py`
 (outside this repository). The MP4 is the best of five 10-second runs
 (2.15 m/s peak, 2.03 m/s smoothed, no falls); the GIF is a 280-pixel, 12 fps FFmpeg
-conversion of the same take. The overlaid speed readout is `mjrl.viewer.live`'s chip
+conversion of the same take, and `run-hero.png`, the README's header still, is
+frame 60 of it at 900 pixels wide. The overlaid speed readout is `mjrl.viewer.live`'s chip
 logic, re-rendered for the video with DIN Alternate Bold. Unlike the clips drawn by
 `tools/readme_media.py`, this take comes from a `logs/` checkpoint, not a committed
 export -- exporting the policy to `tasks/jumper.run/out/example/` and re-rendering is
