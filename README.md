@@ -1,6 +1,6 @@
 # JumperEMW
 
-[English](README.en.md) | **简体中文**
+**简体中文** | [English](README.en.md)
 
 <img src="docs/media/run-hero.png" align="right" width="300" alt="跳跳奔跑瞬间，表显 1.96 m/s">
 
