@@ -17,19 +17,24 @@ rknn-toolkit2==2.3.2
 onnx==1.16.1
 
 # torch: imported at `import rknn.api` time even though nothing here converts a
-# torch model, so it cannot be left out. Taken from PyTorch's CPU index because
-# the PyPI wheel drags in ~2.5 GB of CUDA libraries this never calls.
+# torch model, so it cannot be left out. rknn-toolkit2 2.3.2 declares
+# `torch>=1.13.1,<=2.2.0`, and pip's resolver enforces it: 2.4.0, pinned here
+# first, is refused with ResolutionImpossible (measured in the docker build,
+# python:3.12-slim aarch64, 2026-10-01). 2.2.0 is the newest the declaration
+# allows, and which 2.x it is cannot matter -- no torch model is converted.
+# Taken from PyTorch's CPU index because the PyPI wheel drags in ~2.5 GB of
+# CUDA libraries this never calls.
 #
 # Two lines, because the CPU index names the two architectures differently:
-# x86_64 gets `torch-2.4.0+cpu-...x86_64.whl`, aarch64 gets plain
-# `torch-2.4.0-...aarch64.whl` with no local version. Pinning `2.4.0+cpu`
+# x86_64 gets `torch-2.2.0+cpu-...x86_64.whl`, aarch64 gets plain
+# `torch-2.2.0-...aarch64.whl` with no local version. Pinning `2.2.0+cpu`
 # everywhere resolves to nothing on aarch64 -- "no matching distribution", after
 # the host check has already said the machine is supported. (The aarch64 build
 # has no CUDA variant to be confused with, so the bare version is already the
 # CPU one.)
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.4.0+cpu ; platform_machine == "x86_64"
-torch==2.4.0 ; platform_machine == "aarch64"
+torch==2.2.0+cpu ; platform_machine == "x86_64"
+torch==2.2.0 ; platform_machine == "aarch64"
 
 # setuptools: rknn-toolkit2 imports `pkg_resources`, which setuptools removed in
 # 81. Undeclared, so a fresh install resolves to the newest setuptools and then
