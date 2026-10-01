@@ -4,7 +4,7 @@
 
 [English](HARDWARE.md) | **简体中文**
 
-[认识跳跳](https://kingkong.tech/jumper) · [返回项目首页](../README.zh.md)
+[认识跳跳](https://kingkong.tech/jumper) · [返回项目首页](../README.md)
 
 | 分类 | 项目 | 规格 |
 |---|---|---|

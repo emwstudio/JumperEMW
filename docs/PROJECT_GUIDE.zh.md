@@ -2,7 +2,7 @@
 
 # Jumper 项目指南
 
-[首页](../README.zh.md) · [English](PROJECT_GUIDE.md)
+[首页](../README.md) · [English](PROJECT_GUIDE.md)
 
 ## 从一句话开始
 
