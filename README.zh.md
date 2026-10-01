@@ -1,4 +1,4 @@
-<!-- tracks: README.md @ sha256:a7ad3bc47175698e -->
+<!-- tracks: README.md @ sha256:c0d797d5195f0e1f -->
 
 ![跳跳](docs/media/jumper-hero-zh.png)
 
@@ -12,6 +12,37 @@
 文末列出了相关项目和指南，AI 可以按需读取并使用。
 
 > 🦀 **免费获得跳跳！** [了解如何领取 →](https://beunlimited.me/zh/events/crab-robot-challenge-2026)
+
+## 实验
+
+表格中的动图会直接播放，点击可打开完整视频。所有结果均为仿真回放，真机验证尚未进行。
+
+<table>
+  <thead>
+    <tr>
+      <th>实验</th>
+      <th>预览</th>
+      <th>结果</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>极速奔跑</strong></td>
+      <td>
+        <a href="docs/media/run-top-speed.mp4">
+          <img src="docs/media/run-top-speed.gif" width="280" alt="跳跳在 2.0 m/s 固定指令下冲刺，画面顶部带实时速度表">
+        </a>
+      </td>
+      <td>
+        速度跟踪策略在 2.0 m/s 固定指令下：峰值 <strong>2.15 m/s</strong>，
+        平滑读数 2.03 m/s，五次 10 秒连续奔跑零摔倒。画面顶部叠加的速度表，
+        与 <code>play</code> 窗口中的实时速度显示完全一致。<br>
+        <a href="docs/media/run-top-speed.mp4">完整视频（4K）</a> ·
+        <a href="docs/TUTORIAL.zh.md">训练教程</a>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 ## 一句话，设计外观
 

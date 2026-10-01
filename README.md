@@ -11,6 +11,39 @@ The linked projects and guides below give your assistant the workflows to follow
 
 > 🦀 **Get a free Jumper!** [Find out how →](https://beunlimited.me/zh/events/crab-robot-challenge-2026)
 
+## Experiments
+
+Animated previews play directly in the table. Click one to open the complete
+video. Results are simulation rollouts; hardware validation is still ahead.
+
+<table>
+  <thead>
+    <tr>
+      <th>Experiment</th>
+      <th>Preview</th>
+      <th>Result</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Top-speed running</strong></td>
+      <td>
+        <a href="docs/media/run-top-speed.mp4">
+          <img src="docs/media/run-top-speed.gif" width="280" alt="Jumper sprinting at a pinned 2.0 m/s command with a live speed readout on top">
+        </a>
+      </td>
+      <td>
+        Velocity policy at a pinned 2.0 m/s command: <strong>2.15 m/s</strong>
+        peak, 2.03 m/s on the smoothed readout, and no fall in any of five
+        10-second runs. The overlay is the same live speed readout the
+        <code>play</code> window draws.<br>
+        <a href="docs/media/run-top-speed.mp4">Full video (4K)</a> ·
+        <a href="docs/TUTORIAL.md">Training tutorial</a>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
 ## One sentence to design an appearance
 
 > Design a warm sand ranger appearance for Jumper with coordinated body and limb colors, then export a `.skin`.
