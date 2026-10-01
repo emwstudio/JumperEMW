@@ -30,8 +30,9 @@ import pytest
 import tasks
 from tasks.jumper.common.ppo import jumper_ppo_baseline
 
-#: The four tasks built on `jumper_ppo_baseline`.
-JUMPER_TASKS = ("jumper.flat", "jumper.tripod", "jumper.tetrapod", "jumper.ripple")
+#: The jumper tasks built on `jumper_ppo_baseline`.
+JUMPER_TASKS = ("jumper.flat", "jumper.tripod", "jumper.tetrapod", "jumper.ripple",
+                "jumper.run")
 
 #: The keywords every jumper task must pass for itself.
 #:

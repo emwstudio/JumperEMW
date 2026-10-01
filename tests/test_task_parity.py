@@ -93,6 +93,12 @@ NOT_LOCOMOTION = {
     # listing them as exemptions would empty the parity test rather than
     # describe it.
     "jumper.posture",
+    # Flat's skeleton aimed past flat's measured ceiling, with an unsaturated
+    # forward-progress reward on top: two deliberate differences against each
+    # of the four (the extra term, and a ceiling beyond what any gait implies),
+    # so a comparison with any of them would attribute its outcome to the gait
+    # among other things. Its control is `jumper.flat`, one task.
+    "jumper.run",
 }
 
 #: Fields a task is allowed to differ on because **the gait fixes them**.
