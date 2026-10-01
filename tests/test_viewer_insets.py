@@ -21,6 +21,11 @@ mirrored or of another environment looks like any view from a robot.
 None needs a window: the viewer is opened as far as taking a frame, and the handle is
 a stand-in that checks what the real one checks.
 
+The speed chip at the top centre (`mjrl/viewer/live.py`, "The speed readout") has
+quiet mistakes of its own: a world-frame speed reads 0 for a falling robot the
+terminal says is moving, and a chip placed without looking at the corner insets
+draws over one of them on a narrow window.
+
 Checked against the viewer broken four ways, one at a time -- the preview always of
 environment 0, each rectangle a pixel narrower than its image, a broken preview kept
 on, the corner cleared on every empty frame -- and each fails a test here.
@@ -80,13 +85,13 @@ class _Handle:
         self.images = []
 
 
-def _viewer(sources, env_index: int = 0, num_envs: int = 3):
+def _viewer(sources, env_index: int = 0, num_envs: int = 3, xml: str = XML):
     """A viewer on a native simulation whose sensor context holds `sources`, opened as
     far as taking a frame."""
     from mjrl.backend.native_sim import NativeSimulation
     from mjrl.viewer.live import LiveViewer
 
-    sim = NativeSimulation(num_envs, None, mujoco.MjModel.from_xml_string(XML), "cpu")
+    sim = NativeSimulation(num_envs, None, mujoco.MjModel.from_xml_string(xml), "cpu")
     sim._sensor_context = type("Ctx", (), {"raycast_sensors": sources, "camera_sensors": []})()
     viewer = LiveViewer(sim, env_index=env_index, show_all_envs=False)
     viewer._model, viewer._data = viewer._pick_render_target()
@@ -117,8 +122,8 @@ def test_insets_sit_in_the_top_right_corner_as_whole_blocks() -> None:
     second = rng.integers(0, 255, (*ZONES, 3), dtype=np.uint8)
     viewer._show_insets(handle, (first, second))
 
-    assert len(handle.images) == 2
-    (rect_a, block_a), (rect_b, block_b) = handle.images
+    assert len(handle.images) == 3
+    (rect_a, block_a), (rect_b, block_b), _ = handle.images
     scale = round(1280 * _INSET_FRACTION / ZONES[1])
     assert (rect_a.width, rect_a.height) == (ZONES[1] * scale, ZONES[0] * scale)
     # Flush with the top-right corner, less the margin, and the second below it.
@@ -141,7 +146,7 @@ def test_insets_that_no_longer_fit_are_cleared_once() -> None:
     handle = _Handle(1280, 720)
     image = np.zeros((*ZONES, 3), dtype=np.uint8)
     viewer._show_insets(handle, (image,))
-    assert len(handle.images) == 1
+    assert len(handle.images) == 2  # the dToF and the speed chip
 
     handle.viewport = mujoco.MjrRect(0, 0, 40, 30)     # smaller than one zone image
     viewer._show_insets(handle, (image,))
@@ -257,8 +262,8 @@ def test_the_onboard_inset_is_top_left_at_the_right_hand_insets_height(monkeypat
     zones = np.zeros((*ZONES, 3), dtype=np.uint8)
     viewer._show_insets(handle, (zones,))
 
-    assert len(handle.images) == 2
-    (tof, _), (onboard, image) = handle.images
+    assert len(handle.images) == 3
+    (tof, _), (onboard, image), _ = handle.images
     assert onboard.height == tof.height, "the two corners line up"
     assert onboard.width == round(tof.height * 40 / 30)
     assert (onboard.left, onboard.bottom + onboard.height) == (_INSET_MARGIN, 720 - _INSET_MARGIN)
@@ -269,7 +274,7 @@ def test_the_onboard_inset_is_top_left_at_the_right_hand_insets_height(monkeypat
 
     # With nothing on the right it takes the same fraction of the width.
     viewer._show_insets(handle, ())
-    (alone, _), = handle.images
+    (alone, _), _chip = handle.images
     assert alone.width == round(1280 * _INSET_FRACTION)
     assert abs(alone.height - alone.width * 30 / 40) <= 0.5
 
@@ -278,19 +283,19 @@ def test_the_onboard_inset_goes_while_the_window_looks_through_that_camera(monke
     viewer = _onboard_viewer(monkeypatch)
     handle = _WindowHandle(1280, 720)
     viewer._show_insets(handle, ())
-    assert len(handle.images) == 1
+    assert len(handle.images) == 2
 
     handle.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
     handle.cam.fixedcamid = _camera(viewer._model, "robot/onboard")
     rendered = len(viewer._onboard.render.asked)
     viewer._show_insets(handle, ())
-    assert handle.images == [] and handle.cleared == 1, "it would repeat the window"
+    assert len(handle.images) == 1, "the inset would repeat the window; the chip stays"
     assert len(viewer._onboard.render.asked) == rendered, "and it is not rendered either"
 
     # The control: another fixed camera -- the dToF's -- is not the onboard one.
     handle.cam.fixedcamid = _camera(viewer._model, "robot/tof")
     viewer._show_insets(handle, ())
-    assert len(handle.images) == 1
+    assert len(handle.images) == 2
 
 
 def test_the_onboard_inset_stays_clear_of_the_right_hand_ones(monkeypatch) -> None:
@@ -313,7 +318,7 @@ def test_the_onboard_inset_never_exceeds_the_offscreen_buffer(monkeypatch) -> No
     viewer = _onboard_viewer(monkeypatch)
     handle = _WindowHandle(3840, 2160)          # a fifth of it is 845 px, the buffer 320
     viewer._show_insets(handle, ())
-    (rect, _), = handle.images
+    (rect, _), _chip = handle.images
     assert (rect.width, rect.height) == (320, 240)
 
 
@@ -328,7 +333,7 @@ def test_a_failing_onboard_render_turns_the_inset_off_once(monkeypatch, capsys) 
     handle = _WindowHandle(1280, 720)
     zones = np.zeros((*ZONES, 3), dtype=np.uint8)
     viewer._show_insets(handle, (zones,))              # must not raise
-    assert len(handle.images) == 1 and viewer._onboard is None
+    assert len(handle.images) == 2 and viewer._onboard is None
     assert capsys.readouterr().out.count("no longer shown") == 1
     viewer._show_insets(handle, (zones,))
     assert "no longer shown" not in capsys.readouterr().out, "one message, not one per frame"
@@ -364,7 +369,7 @@ def test_the_onboard_inset_is_the_followed_environment_through_that_camera(monke
     finally:
         inset.close()
     assert viewer._onboard is inset, "rendering failed where a Renderer works"
-    (rect, image), = handle.images
+    rect, image = handle.images[0]
 
     def through_onboard(qpos):
         data = mujoco.MjData(model)
@@ -417,3 +422,123 @@ def test_glvnd_patching_is_turned_off_before_the_window_opens(monkeypatch) -> No
     bare = _viewer([])
     assert bare._find_onboard(bare._model, stripped=False) is None
     assert "__GLVND_DISALLOW_PATCHING" not in os.environ
+
+
+# ── The speed readout, top centre ─────────────────────────────────────────
+
+
+def test_the_speed_chip_shows_the_body_frame_horizontal_speed() -> None:
+    """The chip's number is the terminal's: body frame, so a fall counts.
+
+    A world-frame speed is the quiet mistake here -- it reads 0.00 for a robot
+    dropping straight down, next to a terminal that says it is moving. The
+    window's own MjData is driven directly: no window, no frame thread.
+    """
+    from mjrl.viewer.live import _INSET_MARGIN, _speed_chip
+
+    viewer = _viewer([])
+    handle = _Handle(1280, 720)
+    # Upright, moving at (1.2, 0.5) horizontally and 3.0 straight down: the
+    # vertical part must not count -- hypot(1.2, 0.5) = 1.3 exactly.
+    viewer._data.qvel[:3] = [1.2, 0.5, 3.0]
+    viewer._show_insets(handle, ())
+    (rect, image), = handle.images
+    np.testing.assert_array_equal(image, _speed_chip("1.30 m/s"))
+    assert rect.bottom + rect.height == 720 - _INSET_MARGIN, "flush with the top"
+    assert rect.left == (1280 - rect.width) // 2, "centred between the margins"
+
+    # The control: pitched 90 degrees about y, a world-vertical velocity is
+    # body-forward -- the body frame counts it, the world frame would say 0.
+    viewer._data.qpos[3:7] = [np.cos(np.pi / 4), 0.0, np.sin(np.pi / 4), 0.0]
+    viewer._data.qvel[:3] = [0.0, 0.0, 0.77]
+    viewer._speed_cache = None
+    viewer._speed_smooth = None
+    viewer._show_insets(handle, ())
+    _, pitched = handle.images[0]
+    np.testing.assert_array_equal(pitched, _speed_chip("0.77 m/s"))
+    assert not np.array_equal(pitched, _speed_chip("0.00 m/s")), "world frame would read 0"
+
+
+def test_the_speed_chip_centres_in_the_space_the_insets_leave(monkeypatch) -> None:
+    """Between the two corners, not over them: the chip is centred in the gap
+    between the onboard inset and the dToF's, and dropped where it cannot fit."""
+    from mjrl.viewer.live import _INSET_MARGIN
+
+    viewer = _onboard_viewer(monkeypatch)
+    zones = np.zeros((*ZONES, 3), dtype=np.uint8)
+    handle = _WindowHandle(1280, 720)
+    viewer._show_insets(handle, (zones,))
+    assert len(handle.images) == 3
+    (tof, _), (onboard, _), (chip, _) = handle.images
+    lo = onboard.left + onboard.width + _INSET_MARGIN
+    hi = tof.left - _INSET_MARGIN
+    assert chip.left == lo + (hi - lo - chip.width) // 2
+    top_edge = 720 - _INSET_MARGIN
+    span = min(tof.bottom, onboard.bottom)
+    assert chip.bottom == span + (top_edge - span - chip.height) // 2, (
+        "vertically centred on the insets' column"
+    )
+
+    # The control: at 400 px the gap is 140 px and the chip 259 -- it is left
+    # out rather than drawn over the dToF, which stays.
+    handle = _WindowHandle(400, 300)
+    viewer._show_insets(handle, (zones,))
+    assert len(handle.images) == 2
+
+
+def test_no_speed_chip_without_a_floating_base() -> None:
+    """A model with no free joint has no robot speed to name, and no chip."""
+    welded = XML.replace("<freejoint/>", "")
+    viewer = _viewer([], xml=welded)
+    assert viewer._speed_readout() is None
+
+    handle = _Handle(1280, 720)
+    image = np.zeros((*ZONES, 3), dtype=np.uint8)
+    viewer._show_insets(handle, (image,))            # must not raise
+    assert len(handle.images) == 1, "the dToF alone; nothing at the top centre"
+
+    # The control: the same scene with its free joint gets one.
+    free = _viewer([])
+    assert free._speed_readout() is not None
+
+
+def test_the_speed_chip_is_cached_by_text() -> None:
+    """Re-rendered when the number changes, reused when it does not -- the chip
+    is redrawn every frame while driving."""
+    viewer = _viewer([])
+    first = viewer._speed_readout()
+    assert viewer._speed_readout() is first
+    viewer._data.qvel[0] = 0.5
+    viewer._speed_smooth = None               # smoothing aside; it is pinned below
+    assert viewer._speed_readout() is not first
+    assert viewer._speed_cache[0] == "0.50 m/s"
+
+
+def test_the_displayed_speed_is_smoothed(monkeypatch) -> None:
+    """The raw speed bobs with every stride, which flickered the second decimal
+    every frame; the chip shows an exponential moving average instead. The
+    terminal's number is not touched."""
+    import time
+
+    from mjrl.viewer.live import _SPEED_SMOOTH_S, _speed_chip
+
+    now = [1000.0]
+    monkeypatch.setattr(time, "monotonic", lambda: now[0])
+
+    viewer = _viewer([])
+    viewer._data.qvel[0] = 1.3
+    assert viewer._speed_smooth is None
+    np.testing.assert_array_equal(viewer._speed_readout(), _speed_chip("1.30 m/s"))
+
+    # A jump in the raw value does not jump the display: at the same instant
+    # the average has moved nowhere.
+    viewer._data.qvel[0] = 0.0
+    np.testing.assert_array_equal(viewer._speed_readout(), _speed_chip("1.30 m/s"))
+    # The control: with the smoothing state cleared the same state reads raw.
+    viewer._speed_smooth = None
+    np.testing.assert_array_equal(viewer._speed_readout(), _speed_chip("0.00 m/s"))
+
+    # Half a time constant later it has moved halfway towards the new value.
+    viewer._speed_smooth = (now[0], 1.3)
+    now[0] += _SPEED_SMOOTH_S * 0.5
+    np.testing.assert_array_equal(viewer._speed_readout(), _speed_chip("0.79 m/s"))

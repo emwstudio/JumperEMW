@@ -49,11 +49,18 @@ class _SlowHandle:
     def __init__(self, model) -> None:
         self.user_scn = mujoco.MjvScene(model, 1000)
         self.sync_threads: list[str] = []
+        self.viewport = mujoco.MjrRect(0, 0, 640, 480)
 
     def sync(self, state_only: bool = False) -> None:
         del state_only
         self.sync_threads.append(threading.current_thread().name)
         time.sleep(SLOW_SYNC_S)
+
+    def set_images(self, pairs) -> None:
+        pass
+
+    def clear_images(self) -> None:
+        pass
 
     def is_running(self) -> bool:
         return True

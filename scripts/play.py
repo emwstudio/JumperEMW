@@ -442,6 +442,15 @@ def _watched(env):
     return None, 0
 
 
+#: GLFW's Backspace, the play loop's reset key. Nothing else reads it: every
+#: letter is a rendering-flag toggle in MuJoCo's viewer (mjVISSTRING /
+#: mjRNDSTRING, checked against 3.11 -- W flips wireframe, which is why the
+#: tasks' driving keys all double as viewer shortcuts), Backspace appears
+#: nowhere in its key handling, and the controller's vocabulary has no
+#: Backspace, so under --app the press never reaches the FSM.
+_RESET_KEY = 259  # GLFW_KEY_BACKSPACE
+
+
 def _speed_text(entity, index: int, env) -> str:
     """"speed 0.31 m/s" -- the one quantity every robot has.
 
@@ -478,8 +487,11 @@ def _loop(env, policy, viewer, max_steps: int | None, speed: float = 1.0,
     the camera and be in the way. It prints on one rewritten line so a long replay
     does not scroll.
     """
+    import threading
+
     import torch
 
+    from mjrl.viewer import keys
     from mjrl.viewer.stats import Pacer, RunStats
 
     unwrapped = getattr(env, "unwrapped", env)
@@ -488,6 +500,25 @@ def _loop(env, policy, viewer, max_steps: int | None, speed: float = 1.0,
     entity, index = _watched(env)
     if speed > 0:
         print(f"[mjrl] running at {speed:g}x real time (--speed 0 for uncapped)")
+
+    # Backspace puts the world back. Under --app a fall is the controller's
+    # until the robot is past its tilt limit by a margin
+    # (app_play.leave_falls_to_the_app), and one that comes to rest in between
+    # -- limp in `safe`, not far enough over for the world to pick it up --
+    # held there until the window was closed and play restarted. The flag is
+    # set on the viewer's thread and read on the simulation's, the same
+    # hand-off app_play's ViewerKeys uses. The controller itself needs no
+    # reset: the cascade leaves `safe` on its own once the robot is upright
+    # again, exactly as it does when somebody picks the real robot up.
+    reset = threading.Event()
+
+    def _on_reset_key(keycode: int, down: bool) -> None:
+        if keycode == _RESET_KEY and down:
+            reset.set()
+
+    keys.register(_on_reset_key)
+    if viewer is not None:
+        print("[play] Backspace resets the world")
 
     obs = env.get_observations()
     step = 0
@@ -500,6 +531,17 @@ def _loop(env, policy, viewer, max_steps: int | None, speed: float = 1.0,
         if max_steps is not None and step >= max_steps:
             print(f"\n[mjrl] reached --steps {max_steps}; stopping")
             break
+        if reset.is_set():
+            reset.clear()
+            # Inside `inference_mode`, as the steps around it are: the loop's
+            # steps run under it, so buffers the env (re)made since it
+            # started -- the contact sensor's is one -- are inference
+            # tensors, and a reset outside it cannot write them in place
+            # (measured: RuntimeError, manager_based_rl_env._reset_idx).
+            with torch.inference_mode():
+                env.reset()
+                obs = env.get_observations()
+            print("\n[play] the world was reset (Backspace)", flush=True)
         line = stats.update(readout(entity, index, env))
         if line is not None:
             print(f"\r[play] {line}   ", end="", flush=True)
@@ -516,6 +558,7 @@ def _loop(env, policy, viewer, max_steps: int | None, speed: float = 1.0,
         if monitor is not None:
             monitor.update()
         step += 1
+    keys.unregister(_on_reset_key)
 
 
 if __name__ == "__main__":

@@ -135,6 +135,26 @@ It is too late if something made a context current before the viewer was built -
 a camera sensor on the native backend does -- and then the inset fails its first
 render and is dropped with one message.
 
+## The speed readout
+
+The followed robot's speed -- the number the play loop prints on the terminal,
+the base's horizontal speed in the **body frame** (`scripts/play.py`'s
+`_speed_text`; body frame so a fall counts, not just travel) -- is drawn at the
+top centre of the window, between the two corners' insets. It is an image
+placed by the same `handle.set_images` as the insets: `handle.set_texts` knows
+only the window's four corners, and both top corners are taken.
+
+The value is drawn as seven-segment digits and the unit ("m/s") smaller in a
+5x7 bitmap -- a digital dash's layout -- both from this module's own tables,
+not PIL: the framework does not depend on it (only `tools/readme_media.py`
+does, a dev tool), and fixed geometry at fixed scales renders the same on every
+machine, so a test can compare the chip by the bit. Edges are anti-aliased by
+supersampling. The chip is centred in the space the corner insets leave --
+horizontally between them, vertically on their column -- and left out when
+there is no room rather than drawn over one of them. A model without a floating
+base has no speed worth naming -- a speed then belongs to a joint, not to the
+robot -- and gets no chip.
+
 ## Usage
 
 ```python
@@ -186,6 +206,158 @@ _INSET_MARGIN = 10
 #: robot's own. A scene attaches the robot under a prefix (`robot/onboard`), so
 #: only the name's last segment is compared. A model without one gets no inset.
 _ONBOARD_CAMERA = "onboard"
+
+#: The speed chip's unit glyphs, 5x7: the characters of "m/s". The value is
+#: seven-segment (`_SEG_DIGITS`); only the unit uses this table.
+_SPEED_GLYPHS = {
+    " ": (".....", ".....", ".....", ".....", ".....", ".....", "....."),
+    "-": (".....", ".....", ".....", "#####", ".....", ".....", "....."),
+    ".": (".....", ".....", ".....", ".....", ".....", ".##..", ".##.."),
+    "/": ("....#", "...#.", "...#.", "..#..", ".#...", ".#...", "#...."),
+    "0": (".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."),
+    "1": ("..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."),
+    "2": (".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####"),
+    "3": ("#####", "...#.", "..#..", "...#.", "....#", "#...#", ".###."),
+    "4": ("...#.", "..##.", ".#.#.", "#..#.", "#####", "...#.", "...#."),
+    "5": ("#####", "#....", "####.", "....#", "....#", "#...#", ".###."),
+    "6": ("..##.", ".#...", "#....", "####.", "#...#", "#...#", ".###."),
+    "7": ("#####", "....#", "...#.", "..#..", "..#..", "..#..", "..#.."),
+    "8": (".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."),
+    "9": (".###.", "#...#", "#...#", ".####", "....#", "...#.", ".##.."),
+    "m": (".....", ".....", "##.#.", "#.#.#", "#.#.#", "#...#", "#...#"),
+    "s": (".....", ".....", ".####", "#....", ".###.", "....#", "####."),
+}
+
+#: The scale the value's seven-segment digits are drawn at: one grid unit in
+#: pixels. Five gives 50 x 75 px digits on a 91 px chip, readable in a video
+#: frame rather than only at the desk.
+_VALUE_SCALE = 5
+#: The scale the unit's 5x7 glyphs are drawn at -- smaller than the value, the
+#: way a real dash prints its unit.
+_UNIT_SCALE = 3
+#: The chip's colours: a dark plate, a bright value and a dimmer unit.
+_SPEED_BG = (20, 23, 28)
+_SPEED_FG = (232, 236, 240)
+_SPEED_DIM = (110, 118, 128)
+#: Padding inside the chip, px (horizontal, vertical).
+_SPEED_PAD = (12, 8)
+#: The chip is drawn this many times too large and block-averaged back down, so
+#: the segments' and pixels' square edges get anti-aliased instead of staircases.
+_SPEED_SUPERSAMPLE = 4
+#: The displayed speed's smoothing time constant, seconds. The raw speed bobs
+#: with every stride, which flickered the display every frame; 0.3 s stills
+#: that while a launch still reads as a launch.
+_SPEED_SMOOTH_S = 0.3
+
+#: Seven-segment geometry: stroke thickness and segment length in grid units.
+_SEG_T = 2
+_SEG_L = 6
+#: A digit cell's grid size.
+_SEG_W = _SEG_L + 2 * _SEG_T
+_SEG_H = 2 * _SEG_L + 3 * _SEG_T
+#: Each segment's rectangle on the grid, (x, y, w, h).
+_SEG_RECT = {
+    "a": (_SEG_T, 0, _SEG_L, _SEG_T),
+    "b": (_SEG_T + _SEG_L, _SEG_T, _SEG_T, _SEG_L),
+    "c": (_SEG_T + _SEG_L, 2 * _SEG_T + _SEG_L, _SEG_T, _SEG_L),
+    "d": (_SEG_T, 2 * _SEG_T + 2 * _SEG_L, _SEG_L, _SEG_T),
+    "e": (0, 2 * _SEG_T + _SEG_L, _SEG_T, _SEG_L),
+    "f": (0, _SEG_T, _SEG_T, _SEG_L),
+    "g": (_SEG_T, _SEG_T + _SEG_L, _SEG_L, _SEG_T),
+}
+#: Which segments each character lights.
+_SEG_DIGITS = {
+    "-": "g",
+    "0": "abcdef",
+    "1": "bc",
+    "2": "abdeg",
+    "3": "abcdg",
+    "4": "bcfg",
+    "5": "acdfg",
+    "6": "acdefg",
+    "7": "abc",
+    "8": "abcdefg",
+    "9": "abcdfg",
+}
+
+
+def _speed_chip(text: str):
+    """`text` ("2.06 m/s") as a uint8 [H, W, 3] image: the value in
+    seven-segment digits, the unit smaller and dimmer in the module's 5x7
+    bitmap, bottom-aligned -- a digital dash's layout. Edges anti-aliased by
+    supersampling (`_SPEED_SUPERSAMPLE`).
+
+    Deterministic -- fixed geometry at fixed scales with no rasteriser
+    involved, so tests compare it by the bit and no two machines render it
+    differently.
+    """
+    import numpy as np
+
+    value, _, unit = text.partition(" ")
+    ss = _SPEED_SUPERSAMPLE
+    sv, su = _VALUE_SCALE * ss, _UNIT_SCALE * ss
+    pad_x, pad_y = _SPEED_PAD[0] * ss, _SPEED_PAD[1] * ss
+    digit_h = _SEG_H * sv
+    gap = _SEG_T * sv
+
+    def advance(char: str) -> int:
+        return (_SEG_T if char == "." else _SEG_W) * sv
+
+    value_w = sum(advance(c) for c in value) + gap * (len(value) - 1)
+    unit_cell, unit_gap = 5 * su, su
+    unit_w = len(unit) * unit_cell + (len(unit) - 1) * unit_gap
+    unit_gap_x = 3 * su
+    width = value_w + unit_gap_x + unit_w
+    image = np.full((digit_h + 2 * pad_y, width + 2 * pad_x, 3), _SPEED_BG, np.uint8)
+
+    x = pad_x
+    for char in value:
+        if char == ".":
+            image[pad_y + (_SEG_H - _SEG_T) * sv: pad_y + _SEG_H * sv,
+                  x: x + _SEG_T * sv] = _SPEED_FG
+        else:
+            for seg in _SEG_DIGITS.get(char, ""):
+                rx, ry, rw, rh = _SEG_RECT[seg]
+                image[pad_y + ry * sv: pad_y + (ry + rh) * sv,
+                      x + rx * sv: x + (rx + rw) * sv] = _SPEED_FG
+        x += advance(char) + gap
+
+    # The unit rides smaller and dimmer, bottom-aligned with the digits.
+    x = pad_x + value_w + unit_gap_x
+    y0 = pad_y + digit_h - 7 * su
+    for char in unit:
+        glyph = _SPEED_GLYPHS.get(char, _SPEED_GLYPHS[" "])
+        for row, line in enumerate(glyph):
+            for col, on in enumerate(line):
+                if on == "#":
+                    image[y0 + row * su: y0 + (row + 1) * su,
+                          x + col * su: x + (col + 1) * su] = _SPEED_DIM
+        x += unit_cell + unit_gap
+
+    rows, cols = image.shape[:2]
+    return (image.reshape(rows // ss, ss, cols // ss, ss, 3)
+            .mean(axis=(1, 3)).round().astype(np.uint8))
+
+
+def _followed_speed(model, data) -> float | None:
+    """The followed robot's horizontal speed in the body frame, m/s -- the
+    number `play` prints on the terminal (`scripts/play.py`'s `_speed_text`,
+    which reads `root_link_lin_vel_b`).
+
+    None when the model has no floating base: a speed then belongs to a joint,
+    not to the robot, and there is no chip. Reads the window's own `MjData` --
+    the followed environment's state as of the frame being drawn -- so it runs
+    on the frame thread and shows the same step as the robot beside it.
+    """
+    import mujoco
+    import numpy as np
+
+    if model.nq < 7 or model.nv < 6:
+        return None
+    rot = np.zeros(9)
+    mujoco.mju_quat2Mat(rot, np.asarray(data.qpos[3:7], dtype=np.float64))
+    vel = rot.reshape(3, 3).T @ np.asarray(data.qvel[:3], dtype=np.float64)
+    return float(np.hypot(vel[0], vel[1]))
 
 
 def _max_geom() -> int:
@@ -490,6 +662,12 @@ class LiveViewer:
         self._onboard: _OnboardInset | None = None
         #: Whether the window holds insets, so they are cleared once, not every frame.
         self._insets_shown = False
+        #: The top-centre speed readout's cache, (text, image); re-rendered only
+        #: when the number changes. See "The speed readout" in the module docstring.
+        self._speed_cache: tuple | None = None
+        #: The readout's smoothing state, (monotonic time, value); see
+        #: `_speed_readout`. None until the first sample.
+        self._speed_smooth: tuple | None = None
 
     # ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -1076,7 +1254,8 @@ class LiveViewer:
         import numpy as np
 
         placed = []
-        vp = handle.viewport if images or self._onboard is not None else None
+        chip = self._speed_readout()
+        vp = handle.viewport if images or self._onboard is not None or chip is not None else None
         if vp is not None and vp.width > 0 and vp.height > 0:
             right = vp.left + vp.width - _INSET_MARGIN
             top = vp.bottom + vp.height - _INSET_MARGIN
@@ -1089,15 +1268,68 @@ class LiveViewer:
                 block = np.repeat(np.repeat(image, scale, axis=0), scale, axis=1)
                 placed.append((mujoco.MjrRect(left, bottom, w * scale, h * scale), block))
                 top = bottom - _INSET_MARGIN
+            rightmost = min((r.left for r, _ in placed), default=vp.left + vp.width)
             onboard = self._place_onboard(handle, vp, placed)
             if onboard is not None:
                 placed.append(onboard)
+            if chip is not None:
+                # Centred in the space the corner insets leave, horizontally
+                # and vertically on their column; left out when there is no
+                # room rather than drawn over one of them.
+                ch, cw = chip.shape[:2]
+                lo = vp.left + _INSET_MARGIN
+                if onboard is not None:
+                    rect, _ = onboard
+                    lo = rect.left + rect.width + _INSET_MARGIN
+                hi = rightmost - _INSET_MARGIN
+                left = lo + (hi - lo - cw) // 2
+                top_edge = vp.bottom + vp.height - _INSET_MARGIN
+                if placed:
+                    # Vertically centred on the insets' column, from its top
+                    # edge to the lowest inset's bottom.
+                    span = min(r.bottom for r, _ in placed)
+                    bottom = span + max(0, (top_edge - span - ch) // 2)
+                else:
+                    bottom = top_edge - ch
+                if cw <= hi - lo and bottom >= vp.bottom:
+                    placed.append((mujoco.MjrRect(left, bottom, cw, ch), chip))
         if placed:
             handle.set_images(placed)
             self._insets_shown = True
         elif self._insets_shown:
             handle.clear_images()
             self._insets_shown = False
+
+    def _speed_readout(self):
+        """The followed robot's speed as a chip image for the window's top
+        centre, or None when the model has no floating base. **Frame thread.**
+
+        The displayed value is an exponential moving average over
+        `_SPEED_SMOOTH_S`: the raw speed bobs with every stride, which flickers
+        the second decimal every frame, and a number that cannot be read says
+        less than one a quarter-second behind. The terminal's number is not
+        smoothed.
+
+        Cached by text: the number changes most frames while driving, the
+        pixels only when it does.
+        """
+        import math
+        import time
+
+        raw = _followed_speed(self._model, self._data)
+        if raw is None:
+            return None
+        now = time.monotonic()
+        if self._speed_smooth is None:
+            self._speed_smooth = (now, raw)
+        else:
+            t, value = self._speed_smooth
+            value += (raw - value) * (1.0 - math.exp(-max(0.0, now - t) / _SPEED_SMOOTH_S))
+            self._speed_smooth = (now, value)
+        text = f"{self._speed_smooth[1]:.2f} m/s"
+        if self._speed_cache is None or self._speed_cache[0] != text:
+            self._speed_cache = (text, _speed_chip(text))
+        return self._speed_cache[1]
 
     def _place_onboard(self, handle, vp, right_insets):
         """The onboard camera's `(rect, image)` for the top-left corner, or None.
