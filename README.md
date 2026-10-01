@@ -2,7 +2,7 @@
 
 **English** | [简体中文](README.zh.md)
 
-<img src="docs/media/run-top-speed.gif" align="right" width="300" alt="Jumper sprinting at 2 m/s with a live speed readout">
+<img src="docs/media/run-hero.png" align="right" width="300" alt="Jumper mid-stride at 1.96 m/s, live speed readout on top">
 
 Personal experiments on **Jumper**, a 22-DoF 3D-printed crab robot:
 reinforcement-learning motion training in MuJoCo, with each experiment

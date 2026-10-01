@@ -1,10 +1,10 @@
-<!-- tracks: README.md @ sha256:03a81d6c79eb9819 -->
+<!-- tracks: README.md @ sha256:7d1a4a13ee4290dc -->
 
 # JumperEMW
 
 [English](README.md) | **简体中文**
 
-<img src="docs/media/run-top-speed.gif" align="right" width="300" alt="跳跳在 2 m/s 指令下冲刺，顶部带实时速度表">
+<img src="docs/media/run-hero.png" align="right" width="300" alt="跳跳奔跑瞬间，表显 1.96 m/s">
 
 基于 **Jumper**——一台 22 自由度、3D 打印的螃蟹机器人——的个人实验：
 在 MuJoCo 里做强化学习动作训练，每个实验都有记录、可复现、全开源。
